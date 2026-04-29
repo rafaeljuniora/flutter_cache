@@ -129,6 +129,8 @@ class _ProductListPageState extends State<ProductListPage> {
 class _ProductCard extends StatelessWidget {
   const _ProductCard({required this.product, required this.onTap});
 
+  static const double _thumbnailSize = 84;
+
   final Product product;
   final VoidCallback onTap;
 
@@ -148,19 +150,31 @@ class _ProductCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  product.thumbnail,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 84,
-                      height: 84,
-                      color: Colors.grey.shade300,
-                      child: const Icon(Icons.broken_image),
-                    );
-                  },
+                child: SizedBox.square(
+                  dimension: _thumbnailSize,
+                  child: CachedNetworkImage(
+                    imageUrl: product.thumbnail,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 240,
+                    memCacheHeight: 240,
+                    placeholder: (context, url) {
+                      return Container(
+                        color: Colors.grey.shade200,
+                        alignment: Alignment.center,
+                        child: const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    },
+                    errorWidget: (context, url, error) {
+                      return Container(
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.broken_image),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
