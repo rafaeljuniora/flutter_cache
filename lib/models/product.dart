@@ -44,4 +44,4 @@ class Product {
       'images': images,
     };
   }
-}
+  }

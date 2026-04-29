@@ -1,7 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../data/product_repository.dart';
 import '../models/product.dart';
+import '../viewmodels/product_list_view_model.dart';
 import 'format.dart';
 import 'product_detail_page.dart';
 
@@ -13,110 +14,18 @@ class ProductListPage extends StatefulWidget {
 }
 
 class _ProductListPageState extends State<ProductListPage> {
-  final ProductRepository _repository = ProductRepository();
-
-  bool isLoading = false;
-  bool isRefreshing = false;
-  bool isShowingExpiredCache = false;
-  String? errorMessage;
-  List<Product> products = [];
+  late final ProductListViewModel _vm;
+  late final VoidCallback _listener;
 
   @override
   void initState() {
     super.initState();
-    loadProducts();
-  }
-
-  Future<void> loadProducts() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      final cachedResult = await _repository.getCachedProducts();
-
-      if (cachedResult == null) {
-        final freshProducts = await _repository.fetchAndCacheProducts();
-
-        if (!mounted) return;
-
-        setState(() {
-          products = freshProducts;
-          isLoading = false;
-          isRefreshing = false;
-          isShowingExpiredCache = false;
-        });
-
-        return;
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        products = cachedResult.products;
-        isLoading = false;
-        isShowingExpiredCache = cachedResult.isExpired;
-      });
-
-      if (cachedResult.isExpired) {
-        setState(() {
-          isRefreshing = true;
-        });
-
-        try {
-          final freshProducts = await _repository.fetchAndCacheProducts();
-
-          if (!mounted) return;
-
-          setState(() {
-            products = freshProducts;
-            isRefreshing = false;
-            isShowingExpiredCache = false;
-          });
-        } catch (e) {
-          if (!mounted) return;
-
-          setState(() {
-            isRefreshing = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        errorMessage = 'Falha ao carregar produtos: $e';
-        isLoading = false;
-        isRefreshing = false;
-      });
-    }
-  }
-
-  Future<void> refreshProducts() async {
-    setState(() {
-      isRefreshing = true;
-      errorMessage = null;
-    });
-
-    try {
-      final freshProducts = await _repository.fetchAndCacheProducts();
-
-      if (!mounted) return;
-
-      setState(() {
-        products = freshProducts;
-        isRefreshing = false;
-        isShowingExpiredCache = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        errorMessage = 'Falha ao atualizar produtos: $e';
-        isRefreshing = false;
-      });
-    }
+    _vm = ProductListViewModel();
+    _listener = () {
+      if (mounted) setState(() {});
+    };
+    _vm.addListener(_listener);
+    _vm.loadProducts();
   }
 
   Future<void> openDetails(Product product) async {
@@ -129,24 +38,32 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   @override
+  void dispose() {
+    _vm.removeListener(_listener);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Catalogo Problematico'),
         actions: [
           IconButton(
-            onPressed: refreshProducts,
+            onPressed: () => _vm.refreshProducts(),
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
       body: Builder(
         builder: (context) {
-          if (isLoading && products.isEmpty) {
+          final vm = _vm;
+
+          if (vm.isLoading && vm.products.isEmpty) {
             return const _ProductListSkeleton();
           }
 
-          if (errorMessage != null && products.isEmpty) {
+          if (vm.errorMessage != null && vm.products.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -154,12 +71,12 @@ class _ProductListPageState extends State<ProductListPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      errorMessage!,
+                      vm.errorMessage!,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: loadProducts,
+                      onPressed: vm.loadProducts,
                       child: const Text('Tentar novamente'),
                     ),
                   ],
@@ -170,7 +87,7 @@ class _ProductListPageState extends State<ProductListPage> {
 
           return Column(
             children: [
-              if (isShowingExpiredCache)
+              if (vm.isShowingExpiredCache)
                 Container(
                   width: double.infinity,
                   color: Colors.amber.shade100,
@@ -180,19 +97,19 @@ class _ProductListPageState extends State<ProductListPage> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              if (isRefreshing) const LinearProgressIndicator(),
+              if (vm.isRefreshing) const LinearProgressIndicator(),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: refreshProducts,
+                  onRefresh: vm.refreshProducts,
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
-                    itemCount: products.length,
+                    itemCount: vm.products.length,
                     itemBuilder: (context, index) {
-                      final product = products[index];
+                      final product = vm.products[index];
                       return _ProductCard(
                         product: product,
                         onTap: () => openDetails(product),
@@ -211,6 +128,8 @@ class _ProductListPageState extends State<ProductListPage> {
 
 class _ProductCard extends StatelessWidget {
   const _ProductCard({required this.product, required this.onTap});
+
+  static const double _thumbnailSize = 84;
 
   final Product product;
   final VoidCallback onTap;
@@ -231,19 +150,31 @@ class _ProductCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  product.thumbnail,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 84,
-                      height: 84,
-                      color: Colors.grey.shade300,
-                      child: const Icon(Icons.broken_image),
-                    );
-                  },
+                child: SizedBox.square(
+                  dimension: _thumbnailSize,
+                  child: CachedNetworkImage(
+                    imageUrl: product.thumbnail,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 240,
+                    memCacheHeight: 240,
+                    placeholder: (context, url) {
+                      return Container(
+                        color: Colors.grey.shade200,
+                        alignment: Alignment.center,
+                        child: const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    },
+                    errorWidget: (context, url, error) {
+                      return Container(
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.broken_image),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
