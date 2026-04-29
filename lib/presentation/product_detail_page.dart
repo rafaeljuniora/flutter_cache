@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
+import 'format.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -9,6 +10,8 @@ class ProductDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(product.title),
@@ -17,8 +20,8 @@ class ProductDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 260,
+            AspectRatio(
+              aspectRatio: 4 / 3,
               child: PageView.builder(
                 itemCount: product.images.length,
                 itemBuilder: (context, index) {
@@ -45,27 +48,27 @@ class ProductDetailPage extends StatelessWidget {
                 children: [
                   Text(
                     product.title,
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: theme.textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Categoria: ${product.category}',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: theme.textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Preco: R\$ ${product.price.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    'Preco: ${formatBrl(product.price)}',
+                    style: theme.textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Avaliacao: ${product.rating.toStringAsFixed(1)}',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: theme.textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     product.description,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
                   const Text(
