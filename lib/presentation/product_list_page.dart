@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 import '../viewmodels/product_list_view_model.dart';
 import 'format.dart';
 import 'product_detail_page.dart';
+import 'widgets/product_network_image.dart';
 
 class ProductListPage extends StatefulWidget {
   const ProductListPage({super.key});
@@ -22,7 +22,16 @@ class _ProductListPageState extends State<ProductListPage> {
     super.initState();
     _vm = ProductListViewModel();
     _listener = () {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+
+      final message = _vm.consumeRefreshMessage();
+      if (message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+
+      setState(() {});
     };
     _vm.addListener(_listener);
     _vm.loadProducts();
@@ -152,28 +161,11 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: SizedBox.square(
                   dimension: _thumbnailSize,
-                  child: CachedNetworkImage(
+                  child: ProductNetworkImage(
                     imageUrl: product.thumbnail,
-                    fit: BoxFit.cover,
                     memCacheWidth: 240,
                     memCacheHeight: 240,
-                    placeholder: (context, url) {
-                      return Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    },
-                    errorWidget: (context, url, error) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.broken_image),
-                      );
-                    },
+                    iconSize: 24,
                   ),
                 ),
               ),

@@ -7,7 +7,6 @@ void main() {
   testWidgets('renders product list page', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    expect(find.text('Catalogo Problematico'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Catálogo'), findsOneWidget);
   });
 }

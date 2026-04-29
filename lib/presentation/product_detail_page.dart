@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 import 'format.dart';
+import 'widgets/product_network_image.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -28,30 +28,13 @@ class ProductDetailPage extends StatelessWidget {
               child: PageView.builder(
                 itemCount: product.images.length,
                 itemBuilder: (context, index) {
-                  return CachedNetworkImage(
+                  return ProductNetworkImage(
                     imageUrl: product.images[index],
-                    fit: BoxFit.cover,
                     width: double.infinity,
+                    height: _detailImageHeight,
+                    fit: BoxFit.cover,
                     memCacheWidth: 1400,
-                    placeholder: (context, url) {
-                      return Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: const SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    },
-                    errorWidget: (context, url, error) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                          child: Icon(Icons.broken_image, size: 48),
-                        ),
-                      );
-                    },
+                    iconSize: 48,
                   );
                 },
               ),

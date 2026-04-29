@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/product_exception.dart';
 import '../data/product_repository.dart';
 import '../models/product.dart';
 
 class ProductListViewModel extends ChangeNotifier {
-	ProductListViewModel({ProductRepository? repository}) : _repository = repository ?? ProductRepository();
+	ProductListViewModel({ProductRepository? repository})
+		: _repository = repository ?? ProductRepository();
 
 	final ProductRepository _repository;
 
@@ -13,10 +15,12 @@ class ProductListViewModel extends ChangeNotifier {
 	bool isRefreshing = false;
 	bool isShowingExpiredCache = false;
 	String? errorMessage;
+	String? refreshMessage;
 
 	Future<void> loadProducts() async {
 		isLoading = true;
 		errorMessage = null;
+		refreshMessage = null;
 		notifyListeners();
 
 		try {
@@ -49,13 +53,23 @@ class ProductListViewModel extends ChangeNotifier {
 					isRefreshing = false;
 					isShowingExpiredCache = false;
 					notifyListeners();
+				} on ProductException catch (e) {
+					refreshMessage = e.message;
+					isRefreshing = false;
+					notifyListeners();
 				} catch (_) {
+					refreshMessage = 'Nao foi possivel atualizar os produtos agora.';
 					isRefreshing = false;
 					notifyListeners();
 				}
 			}
-		} catch (e) {
-			errorMessage = 'Falha ao carregar produtos: $e';
+		} on ProductException catch (e) {
+			errorMessage = e.message;
+			isLoading = false;
+			isRefreshing = false;
+			notifyListeners();
+		} catch (_) {
+			errorMessage = 'Nao foi possivel carregar os produtos agora.';
 			isLoading = false;
 			isRefreshing = false;
 			notifyListeners();
@@ -65,6 +79,7 @@ class ProductListViewModel extends ChangeNotifier {
 	Future<void> refreshProducts() async {
 		isRefreshing = true;
 		errorMessage = null;
+		refreshMessage = null;
 		notifyListeners();
 
 		try {
@@ -74,11 +89,20 @@ class ProductListViewModel extends ChangeNotifier {
 			isRefreshing = false;
 			isShowingExpiredCache = false;
 			notifyListeners();
-		} catch (e) {
-			errorMessage = 'Falha ao atualizar produtos: $e';
+		} on ProductException catch (e) {
+			refreshMessage = e.message;
+			isRefreshing = false;
+			notifyListeners();
+		} catch (_) {
+			refreshMessage = 'Nao foi possivel atualizar os produtos agora.';
 			isRefreshing = false;
 			notifyListeners();
 		}
 	}
-}
 
+	String? consumeRefreshMessage() {
+		final message = refreshMessage;
+		refreshMessage = null;
+		return message;
+	}
+}
