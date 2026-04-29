@@ -10,7 +10,7 @@ class ProductApi {
   final http.Client _client;
 
   Future<List<Product>> fetchProducts() async {
-    await Future.delayed(const Duration(seconds: 2));
+    //await Future.delayed(const Duration(seconds: 2));
 
     final response = await _client.get(
       Uri.parse('https://dummyjson.com/products?limit=30'),
