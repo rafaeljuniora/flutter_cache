@@ -47,7 +47,7 @@ class _ProductListPageState extends State<ProductListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catalogo Problematico'),
+        title: const Text('Catálogo'),
         actions: [
           IconButton(
             onPressed: () => _vm.refreshProducts(),
