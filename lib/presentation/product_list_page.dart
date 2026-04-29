@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/product_exception.dart';
 import '../data/product_repository.dart';
 import '../models/product.dart';
 import 'product_detail_page.dart';
+import 'widgets/product_network_image.dart';
 
 class ProductListPage extends StatefulWidget {
   const ProductListPage({super.key});
@@ -15,6 +17,7 @@ class _ProductListPageState extends State<ProductListPage> {
   final ProductRepository _repository = ProductRepository();
 
   bool isLoading = false;
+  bool isRefreshing = false;
   String? errorMessage;
   List<Product> products = [];
 
@@ -33,17 +36,66 @@ class _ProductListPageState extends State<ProductListPage> {
     try {
       final loaded = await _repository.getProducts();
 
+      if (!mounted) return;
+
       setState(() {
         products = loaded;
       });
-    } catch (e) {
+    } on ProductException catch (e) {
+      if (!mounted) return;
+
       setState(() {
-        errorMessage = 'Falha ao carregar produtos: $e';
+        errorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = 'Nao foi possivel carregar os produtos agora.';
       });
     } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> refreshProducts() async {
+    setState(() {
+      isRefreshing = true;
+      errorMessage = null;
+    });
+
+    try {
+      final loaded = await _repository.getProducts();
+
+      if (!mounted) return;
+
       setState(() {
-        isLoading = false;
+        products = loaded;
       });
+    } on ProductException catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel atualizar os produtos agora.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefreshing = false;
+        });
+      }
     }
   }
 
@@ -54,8 +106,6 @@ class _ProductListPageState extends State<ProductListPage> {
         builder: (_) => ProductDetailPage(product: product),
       ),
     );
-
-    await loadProducts();
   }
 
   @override
@@ -65,7 +115,7 @@ class _ProductListPageState extends State<ProductListPage> {
         title: const Text('Catalogo Problematico'),
         actions: [
           IconButton(
-            onPressed: loadProducts,
+            onPressed: isRefreshing ? null : refreshProducts,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -100,44 +150,40 @@ class _ProductListPageState extends State<ProductListPage> {
             );
           }
 
-          return ListView.separated(
-            itemCount: products.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final product = products[index];
+          return Column(
+            children: [
+              if (isRefreshing) const LinearProgressIndicator(),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: products.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final product = products[index];
 
-              return ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    product.thumbnail,
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
+                    return ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: ProductNetworkImage(
+                        imageUrl: product.thumbnail,
                         width: 72,
                         height: 72,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.broken_image),
-                      );
-                    },
-                  ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      title: Text(
+                        product.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${product.category} • R\$ ${product.price.toStringAsFixed(2)}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => openDetails(product),
+                    );
+                  },
                 ),
-                title: Text(
-                  product.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${product.category} • R\$ ${product.price.toStringAsFixed(2)}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () => openDetails(product),
-              );
-            },
+              ),
+            ],
           );
         },
       ),

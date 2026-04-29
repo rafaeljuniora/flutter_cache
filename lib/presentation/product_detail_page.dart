@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
+import 'widgets/product_network_image.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -22,18 +23,12 @@ class ProductDetailPage extends StatelessWidget {
               child: PageView.builder(
                 itemCount: product.images.length,
                 itemBuilder: (context, index) {
-                  return Image.network(
-                    product.images[index],
-                    fit: BoxFit.cover,
+                  return ProductNetworkImage(
+                    imageUrl: product.images[index],
                     width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                          child: Icon(Icons.broken_image, size: 48),
-                        ),
-                      );
-                    },
+                    height: 260,
+                    fit: BoxFit.cover,
+                    iconSize: 48,
                   );
                 },
               ),
